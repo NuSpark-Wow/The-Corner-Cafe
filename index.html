@@ -169,6 +169,12 @@ button{font-family:inherit;cursor:pointer}
         <p class="step-s">Where should your friend stand on your situation?</p>
         <div class="styles" id="approaches"></div>
       </div>
+      <div style="margin-top:16px">
+        <h2 class="step-t" style="font-size:18px">Optional: share a website or document</h2>
+        <p class="step-s">Want your friend to look at something? Add a web page, or a PDF, Word or text file.</p>
+        <div class="row"><button class="btn ghost small" id="shareBtn1">📎 Add a website or document</button></div>
+        <div class="chips sharedChips" style="margin-top:8px"></div>
+      </div>
       <div class="row" style="margin-top:14px">
         <button class="btn" id="startBtn" disabled>Pull up a chair →</button>
         <span class="step-s" style="margin:0" id="startHint"></span>
@@ -188,12 +194,14 @@ button{font-family:inherit;cursor:pointer}
         <button class="btn ghost small" id="voiceBtn">🔊 Voice: Off</button>
         <span class="vol hidden" id="volBox"><button id="muteBtn" title="Mute">🔊</button><input type="range" id="volume" min="0" max="100" value="85" aria-label="Volume"></span>
         <span class="seg hidden" id="speedBox"><button data-sp="normal" class="on">Normal</button><button data-sp="slow">Slow</button></span>
+        <button class="btn ghost small" id="shareBtn2">📎 Add a website or document</button>
         <button class="btn ghost small" id="copyBtn">🤝 Take This Friend With You</button>
         <button class="btn ghost small" id="dlBtn">⬇️ Download Chat</button>
         <button class="btn ghost small" id="newBtn">↺ New Chat</button>
       </div>
       <div class="scene" id="scene">
-        <svg class="tablesvg hidden" id="tableSvg" viewBox="0 0 460 220" aria-hidden="true"></svg>
+        <div class="chips sharedChips" style="margin:-4px 0 10px"></div>
+      <svg class="tablesvg hidden" id="tableSvg" viewBox="0 0 460 220" aria-hidden="true"></svg>
         <div class="duo hidden" id="duo">
           <div class="seat" id="duoFriend"><div class="ico" id="duoIco"></div><span id="duoName"></span></div>
           <div class="cups">☕ ☕</div>
@@ -257,6 +265,25 @@ button{font-family:inherit;cursor:pointer}
   </div>
 </div>
 
+<!-- share a website or document -->
+<div class="ov hidden" id="shareOv">
+  <div class="panel">
+    <h2 class="step-t">Share a website or document</h2>
+    <p class="step-s">Your friend will read it and talk about it with you. Up to 3 at a time.</p>
+    <div class="ask" style="margin-top:0">
+      <input id="siteUrl" type="url" placeholder="Paste a web address, like nusparkmarketing.com" style="flex:1;min-width:0;border:2px solid var(--line);border-radius:14px;background:var(--bg2);color:var(--cream);padding:12px 14px;font:16px Inter,sans-serif;outline:none">
+      <button class="btn small" id="siteAdd">Add site</button>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn ghost small" id="docPick">📄 Upload a document (PDF, Word, text)</button>
+      <input type="file" id="docFile" class="hidden" accept=".pdf,.docx,.txt,.md,.csv,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+    </div>
+    <div class="chips sharedChips" style="margin-top:12px"></div>
+    <div class="err hidden" id="shareErr"></div>
+    <div class="row" style="margin-top:14px"><button class="btn" id="shareDone">Done</button></div>
+  </div>
+</div>
+
 <!-- copy persona -->
 <div class="ov hidden" id="copyOv">
   <div class="panel">
@@ -317,13 +344,13 @@ const icon = (k, color) => `<svg viewBox="0 0 24 24" fill="none" stroke="${color
 
 // ---------- state ----------
 const S = { data:null, mode:"one", tab:"talk", friend:null, styles:[], history:[], used:0, round:0, done:false, recap:"",
-  approach:null, extended:false, busy:false, voiceOn:false, voices:{}, paused:false, queue:[], resumedFrom:null };
+  approach:null, extended:false, shared:[], busy:false, voiceOn:false, voices:{}, paused:false, queue:[], resumedFrom:null };
 const F = id => S.data.friends.find(f => f.id === id);
 const ST = id => S.data.styles.find(s => s.id === id);
 const AP = id => S.data.approaches.find(a => a.id === id);
 const isHelp = () => S.friend && F(S.friend).section === "help";
 const needsApproach = () => S.mode === "one" && isHelp();
-const replyMax = () => !S.friend ? S.data.maxReplies : (F(S.friend).section === "talk" ? S.data.talkReplies + (S.extended ? S.data.talkExtra : 0) : S.data.maxReplies);
+const replyMax = () => (!S.friend || F(S.friend).section === "help" ? S.data.maxReplies : S.data.talkReplies) + (S.extended ? S.data.talkExtra : 0);
 
 async function post(url, body, ms){
   const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), ms || 60000);
@@ -429,7 +456,9 @@ function startChat(opts){
   if (S.recap) addNote("Welcome back! Here's where you left off: " + S.recap);
   else addNote(S.mode === "round"
     ? `You're at the Roundtable with ${f.name} in ${S.styles.length} styles. Ask a question and they'll each weigh in. You get ${S.data.maxRounds} rounds.`
-    : `You're having coffee with ${f.name} (${ST(S.styles[0]).name}${S.approach ? ", " + AP(S.approach).name : ""}). Say hello or jump right in. You get ${replyMax()} replies in this chat${f.section === "talk" ? ", with an option for " + S.data.talkExtra + " more" : ""}.`);
+    : `You're having coffee with ${f.name} (${ST(S.styles[0]).name}${S.approach ? ", " + AP(S.approach).name : ""}). Say hello or jump right in. You get ${replyMax()} replies in this chat, with an option for ${S.data.talkExtra} more.`);
+  if (S.shared.length) addNote("📎 Shared with your friend: " + S.shared.map(x => x.name).join(", "));
+  paintShared();
   showErr("chatErr", "");
   window.scrollTo({ top: 0, behavior: "smooth" });
   setTimeout(() => $("input").focus(), 200);
@@ -526,7 +555,7 @@ async function send(keepGoing){
   typing(true, S.mode === "round" ? "the table is talking..." : F(S.friend).name + " is typing...");
   friendTalking(true);
   try {
-    const r = await post("/api/chat", { part:"chat", mode:S.mode, friend:S.friend, styles:S.styles, approach:S.approach, extended:S.extended, history: text ? S.history.slice(0, -1) : S.history, userText: text, recap:S.recap });
+    const r = await post("/api/chat", { part:"chat", mode:S.mode, friend:S.friend, styles:S.styles, approach:S.approach, extended:S.extended, shared:S.shared, history: text ? S.history.slice(0, -1) : S.history, userText: text, recap:S.recap });
     typing(false);
     if (S.mode === "round") {
       S.round = r.round; S.done = !!r.done;
@@ -575,7 +604,7 @@ function finish(){
 $("moreYes").onclick = () => { S.extended = true; $("moreBox").classList.add("hidden"); $("askWrap").classList.remove("hidden"); paintCounter(); addNote(`Great, ${S.data.talkExtra} more replies. Keep it going!`); $("input").focus(); };
 $("moreNo").onclick = () => { S.done = true; $("moreBox").classList.add("hidden"); finish(); };
 $("newBtn").onclick = $("endNew").onclick = () => {
-  stopAudio(); S.queue = [];
+  stopAudio(); S.queue = []; S.shared = []; paintShared();
   $("chat").classList.add("hidden"); $("pick").classList.remove("hidden");
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
@@ -657,6 +686,58 @@ $("copyGo").onclick = async () => {
 };
 $("copyClose").onclick = () => $("copyOv").classList.add("hidden");
 
+// ---------- share a website or document ----------
+function paintShared(){
+  document.querySelectorAll(".sharedChips").forEach(box => {
+    box.innerHTML = S.shared.map((x, i) => `<span class="chip">${x.kind === "site" ? "🌐" : "📄"} ${esc(x.name.length > 44 ? x.name.slice(0, 42) + "…" : x.name)}<button data-rm="${i}" title="Remove">×</button></span>`).join("");
+    box.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { S.shared.splice(+b.dataset.rm, 1); paintShared(); });
+  });
+}
+$("shareBtn1").onclick = $("shareBtn2").onclick = () => { showErr("shareErr", ""); $("siteUrl").value = ""; paintShared(); $("shareOv").classList.remove("hidden"); };
+$("shareDone").onclick = () => $("shareOv").classList.add("hidden");
+function addShared(item){
+  if (S.shared.length >= 3) throw new Error("You can share up to 3 at a time. Remove one first.");
+  S.shared.push(item); paintShared();
+  if (!$("chat").classList.contains("hidden")) addNote(`📎 You shared ${item.kind === "site" ? "a website" : "a document"}: ${item.name}. Ask your friend about it.`);
+}
+$("siteAdd").onclick = async () => {
+  const url = $("siteUrl").value.trim(); if (!url) { $("siteUrl").focus(); return; }
+  showErr("shareErr", ""); $("siteAdd").disabled = true; $("siteAdd").textContent = "Reading...";
+  try { const r = await post("/api/chat", { part:"site", url }, 30000); addShared({ kind:"site", name:r.name, text:r.text }); $("siteUrl").value = ""; }
+  catch(e) { showErr("shareErr", e.message); }
+  $("siteAdd").disabled = false; $("siteAdd").textContent = "Add site";
+};
+$("siteUrl").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("siteAdd").click(); } });
+$("docPick").onclick = () => $("docFile").click();
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("The document reader didn't load. Check your connection and try again.")); document.head.appendChild(s); }); }
+async function readDoc(file){
+  const name = file.name, low = name.toLowerCase();
+  if (file.size > 15e6) throw new Error("That file is too big. Try one under 15 MB.");
+  if (/\.(txt|md|csv)$/.test(low) || file.type.startsWith("text/")) return await file.text();
+  if (low.endsWith(".pdf") || file.type === "application/pdf") {
+    if (!window.pdfjsLib) { await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"); window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; }
+    const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    let out = "";
+    for (let i = 1; i <= Math.min(pdf.numPages, 40) && out.length < 12000; i++) { const c = await (await pdf.getPage(i)).getTextContent(); out += c.items.map(t => t.str).join(" ") + "\n"; }
+    return out;
+  }
+  if (low.endsWith(".docx")) {
+    if (!window.mammoth) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js");
+    return (await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })).value;
+  }
+  throw new Error("That file type isn't supported. Use a PDF, a Word (.docx) file, or a text file.");
+}
+$("docFile").onchange = async e => {
+  const file = e.target.files[0]; e.target.value = ""; if (!file) return;
+  showErr("shareErr", ""); $("docPick").disabled = true; $("docPick").textContent = "📄 Reading...";
+  try {
+    const text = (await readDoc(file)).replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+    if (text.length < 20) throw new Error("No readable text was found in that file. If it's a scanned PDF, try a text version.");
+    addShared({ kind:"doc", name:file.name, text:text.slice(0, 8000) });
+  } catch(err) { showErr("shareErr", err.message); }
+  $("docPick").disabled = false; $("docPick").textContent = "📄 Upload a document (PDF, Word, text)";
+};
+
 // ---------- download (PDF with the fine print at the bottom) ----------
 function loadJsPDF(){
   if (window.jspdf) return Promise.resolve();
@@ -687,7 +768,7 @@ $("dlBtn").onclick = $("endDl").onclick = async () => {
   y += 10;
   line(S.data.finePrint, 8.5, false, [120, 100, 85]);
   line(S.data.credit, 8.5, true, [120, 100, 85]);
-  const saved = { v:1, mode:S.mode, friend:S.friend, styles:S.styles, approach:S.approach, history:S.history.slice(-40), recap:S.recap };
+  const saved = { v:1, mode:S.mode, friend:S.friend, styles:S.styles, approach:S.approach, shared:S.shared.map(x => ({ kind:x.kind, name:x.name, text:x.text.slice(0, 4000) })), history:S.history.slice(-40), recap:S.recap };
   doc.setProperties({ title:"The Corner Cafe - " + f.name, subject:"OOO1:" + b64u(JSON.stringify(saved)), creator:S.data.credit });
   doc.save(`corner-cafe-${f.id}-${new Date().toISOString().slice(0, 10)}.pdf`);
   toast("Saved! Upload it later to pick up where you left off.");
@@ -713,6 +794,7 @@ $("resumeFile").onchange = async e => {
     S.friend = saved.friend; S.styles = (saved.styles || []).filter(id => ST(id)).slice(0, S.mode === "round" ? 3 : 1);
     if (!S.styles.length) S.styles = ["easy"];
     S.approach = saved.approach && AP(saved.approach) ? saved.approach : null;
+    S.shared = Array.isArray(saved.shared) ? saved.shared.slice(0, 3) : [];
     S.tab = F(S.friend).tab; paintTabs(); paintGrid(); paintStyles();
     if (needsApproach() && !S.approach) S.approach = "balanced";
     startChat({ recap: r.recap });
