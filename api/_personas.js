@@ -3,7 +3,7 @@
 // Edit any friend's "focus" text to change how that friend thinks and helps.
 
 const SITE = "nusparklearnwow.com";
-const CREDIT = "The Corner Café by NuSpark Publishing, " + SITE;
+const CREDIT = "The Corner Café by NuSpark Learn…Wow!, " + SITE;
 
 // Two sections: "help" friends weigh in and give next steps; "talk" friends are for good conversation.
 const TABS = [
