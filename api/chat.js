@@ -168,7 +168,7 @@ function push(messages, role, content) {
 // ---------- read a website the visitor shares ----------
 async function readSite(body) {
   let u;
-  try { u = new URL(String(body.url || "").trim().replace(/^(?!https?:\/\/)/i, "https://")); } catch (e) { throw fail(400, "That doesn't look like a web address. Try something like nusparkmarketing.com"); }
+  try { u = new URL(String(body.url || "").trim().replace(/^(?!https?:\/\/)/i, "https://")); } catch (e) { throw fail(400, "That doesn't look like a web address. Try something like www.example.com"); }
   if (!/^https?:$/.test(u.protocol)) throw fail(400, "Only regular web addresses (http or https) can be shared.");
   const h = u.hostname.toLowerCase();
   if (h === "localhost" || h.endsWith(".local") || h.endsWith(".internal") || /^(\d+\.){3}\d+$/.test(h) || h.includes(":")) throw fail(400, "That address can't be opened. Try a regular website.");
