@@ -77,7 +77,10 @@ button{font-family:inherit;cursor:pointer}
 
 /* consent */
 .ov{position:fixed;inset:0;background:rgba(20,11,6,.82);display:grid;place-items:center;z-index:50;padding:18px}
-.ov .panel{max-width:520px;width:100%}
+.ov .panel{max-width:520px;width:100%;position:relative}
+.xclose{position:absolute;top:10px;right:10px;width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:transparent;color:var(--cream);font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center;touch-action:manipulation}
+.xclose:hover{border-color:var(--green)}
+.ov .panel .step-t{padding-right:48px}
 body.embedded .ov{align-items:start;padding-top:28px}
 .check{display:flex;gap:10px;align-items:flex-start;margin:14px 0 16px;font-size:15px;line-height:1.4}
 .check input{width:22px;height:22px;accent-color:var(--green);flex:none;margin-top:1px}
@@ -269,6 +272,7 @@ body.embedded .ov{align-items:start;padding-top:28px}
 <!-- voice picker -->
 <div class="ov hidden" id="voiceOv">
   <div class="panel">
+    <button class="xclose" type="button" aria-label="Close">✕</button>
     <h2 class="step-t">Turn on voice</h2>
     <p class="step-s">Pick male or female. Tap "Try another" for a different voice until you like it.</p>
     <div id="voiceRows"></div>
@@ -283,6 +287,7 @@ body.embedded .ov{align-items:start;padding-top:28px}
 <!-- share a website or document -->
 <div class="ov hidden" id="shareOv">
   <div class="panel">
+    <button class="xclose" type="button" aria-label="Close">✕</button>
     <h2 class="step-t">Share a website or document</h2>
     <p class="step-s">Your friend will read it and talk about it with you. Up to 3 at a time.</p>
     <div class="ask" style="margin-top:0">
@@ -302,6 +307,7 @@ body.embedded .ov{align-items:start;padding-top:28px}
 <!-- copy persona -->
 <div class="ov hidden" id="copyOv">
   <div class="panel">
+    <button class="xclose" type="button" aria-label="Close">✕</button>
     <h2 class="step-t">Take this friend with you</h2>
     <p class="step-s">Copy your friend and paste it into ChatGPT, Claude, Copilot or Gemini to keep talking there. Many of those apps have a free voice mode on your phone.</p>
     <div class="seg" id="copyStyles" style="margin-bottom:10px"></div>
@@ -689,6 +695,14 @@ async function sample(id){
 }
 $("voiceOn").onclick = () => { S.voiceOn = true; stopAudio(); $("voiceOv").classList.add("hidden"); paintVoiceBtn(); toast("Voice on. Your friend will read replies out loud."); };
 $("voiceOff").onclick = () => { S.voiceOn = false; stopAudio(); $("voiceOv").classList.add("hidden"); paintVoiceBtn(); };
+// close any pop-up (except the one-time agreement): the ✕, a tap on the dark area, or Esc
+function closeOv(ov){ if (ov.id === "voiceOv") { stopAudio(); paintVoiceBtn(); } ov.classList.add("hidden"); }
+["voiceOv","shareOv","copyOv"].forEach(id => {
+  const ov = $(id);
+  ov.querySelector(".xclose").onclick = () => closeOv(ov);
+  ov.addEventListener("click", e => { if (e.target === ov) closeOv(ov); });
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") ["voiceOv","shareOv","copyOv"].forEach(id => { if (!$(id).classList.contains("hidden")) closeOv($(id)); }); });
 function paintVoiceBtn(){ $("voiceBtn").textContent = "🔊 Voice: " + (S.voiceOn ? "On" : "Off"); $("volBox").classList.toggle("hidden", !S.voiceOn); $("speedBox").classList.toggle("hidden", !S.voiceOn); applyVol(); }
 
 // ---------- take this friend with you ----------
