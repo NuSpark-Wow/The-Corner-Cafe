@@ -18,6 +18,7 @@ const HOURLY_LIMIT = 60; // AI calls per visitor per hour
 const hits = new Map();
 
 module.exports = async (req, res) => {
+  if (!(await require("./_lwgate")(req, res, "the-corner-cafe"))) return;
   if (!allowedRequest(req)) return blockRequest(res);
   if (req.method === "GET") {
     const part = String((req.query && req.query.part) || "");

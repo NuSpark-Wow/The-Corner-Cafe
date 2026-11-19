@@ -28,6 +28,7 @@ const cache = new Map();
 function list(s) { const a = String(s || "").split(",").map(x => x.trim()).filter(Boolean); return a.length ? a : null; }
 
 module.exports = async (req, res) => {
+  if (!(await require("./_lwgate")(req, res, "the-corner-cafe"))) return;
   if (!allowedRequest(req)) return blockRequest(res);
   const key = process.env.ELEVENLABS_API_KEY;
   if (req.method === "GET") {
