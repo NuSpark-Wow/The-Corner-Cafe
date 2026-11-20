@@ -193,6 +193,13 @@ body.embedded .ov{align-items:start;padding-top:28px}
 .ask{display:flex;gap:10px;margin-top:12px}
 .ask textarea{flex:1;min-width:0;min-height:56px;max-height:150px;resize:vertical;border:2px solid var(--line);border-radius:14px;background:var(--bg2);color:var(--cream);padding:14px 16px;font:16px/1.4 Inter,sans-serif;outline:none}
 .ask textarea:focus{border-color:var(--green)}
+/* mic: speak instead of typing */
+.mic{flex:none;min-width:56px;padding:0 14px;font-size:22px;line-height:1;border-radius:14px;border:2px solid var(--line);background:var(--bg2);color:var(--cream);touch-action:manipulation}
+.mic:hover{border-color:var(--green)}
+.mic.on{background:#c94a3a;border-color:#c94a3a;color:#fff;animation:micpulse 1.2s infinite}
+@keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(201,74,58,.55)}50%{box-shadow:0 0 0 9px rgba(201,74,58,0)}}
+.micnote{font-size:13px;color:var(--soft);margin-top:6px}
+.takehint{font-size:13px;line-height:1.4;color:var(--soft);margin:-4px 0 12px}
 .fine{font-size:12px;line-height:1.45;color:var(--soft);margin-top:8px}
 .endbox{margin-top:12px;text-align:center}
 .endbox p{margin:0 0 10px;color:var(--soft)}
@@ -290,6 +297,7 @@ body.embedded .ov{align-items:start;padding-top:28px}
         <button class="btn ghost small" id="dlBtn">⬇️ Download Chat</button>
         <button class="btn ghost small" id="newBtn">↺ New Chat</button>
       </div>
+      <p class="takehint">🤝 <b>Take This Friend With You</b> copies your friend's instructions so you can paste them into ChatGPT, Claude or Gemini and keep the conversation going there.</p>
       <div class="scene" id="scene">
         <div class="chips sharedChips" style="margin:-4px 0 10px"></div>
       <svg class="tablesvg hidden" id="tableSvg" viewBox="0 0 460 220" aria-hidden="true"></svg>
@@ -303,8 +311,10 @@ body.embedded .ov{align-items:start;padding-top:28px}
       <div id="askWrap">
         <div class="ask">
           <textarea id="input" maxlength="1500"></textarea>
+          <button class="mic hidden" id="micBtn" type="button" aria-label="Speak instead of typing" title="Speak instead of typing">🎤</button>
           <button class="btn" id="sendBtn">Send</button>
         </div>
+        <div class="micnote hidden" id="micNote">Listening... talk, then tap ⏹ (or just pause). Check the words, then tap Send.</div>
         <div class="row hidden" id="roundCtl" style="margin-top:10px">
           <button class="btn ghost small" id="pauseBtn">Pause</button>
           <button class="btn ghost small" id="keepBtn">Keep going (let them talk)</button>
@@ -649,8 +659,38 @@ $("pauseBtn").onclick = () => {
   if (S.paused) { stopAudio(); toast("Paused. Type to jump in, or tap Resume."); }
 };
 
+// ---------- mic: speak instead of typing (shows only on browsers that support it) ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false;
+function paintMic(){
+  $("micBtn").classList.toggle("on", listening);
+  $("micBtn").textContent = listening ? "⏹" : "🎤";
+  $("micBtn").setAttribute("aria-label", listening ? "Stop listening" : "Speak instead of typing");
+  $("micNote").classList.toggle("hidden", !listening);
+}
+function stopMic(){ if (rec && listening) { try { rec.stop(); } catch(e){} } }
+function startMic(){
+  if (S.busy || S.done) return;
+  stopAudio(); // the friend stops talking so the mic doesn't hear it
+  const base = $("input").value.trim();
+  rec = new SR(); rec.lang = "en-US"; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+  rec.onresult = e => {
+    let t = ""; for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+    $("input").value = ((base ? base + " " : "") + t.trim()).slice(0, 1500);
+  };
+  rec.onerror = e => {
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") { $("micBtn").classList.add("hidden"); toast("The mic is blocked. You can still type, or use your keyboard's mic."); }
+    else if (e.error === "no-speech") toast("Didn't catch that. Tap 🎤 and try again.");
+    else if (e.error === "audio-capture") toast("No microphone found. You can still type.");
+  };
+  rec.onend = () => { listening = false; paintMic(); };
+  try { rec.start(); listening = true; paintMic(); } catch(e) { listening = false; paintMic(); }
+}
+if (SR) { $("micBtn").classList.remove("hidden"); $("micBtn").onclick = () => listening ? stopMic() : startMic(); }
+
 async function send(keepGoing){
   if (S.busy || S.done) return;
+  stopMic();
   const text = $("input").value.trim();
   if (!keepGoing && !text) { $("input").focus(); return; }
   if (keepGoing && !S.history.length) { toast("Ask the table a question first."); return; }
@@ -684,7 +724,7 @@ async function send(keepGoing){
   if (S.done) finish();
   else if (S.offerMore) { S.offerMore = false; $("askWrap").classList.add("hidden"); $("moreBox").classList.remove("hidden"); $("counter").textContent = `Reply ${S.used} of ${replyMax()}`; setTimeout(() => $("moreBox").scrollIntoView({ behavior:"smooth", block:"center" }), 200); }
 }
-function setBusy(b){ $("sendBtn").disabled = b; $("keepBtn").disabled = b; }
+function setBusy(b){ $("sendBtn").disabled = b; $("keepBtn").disabled = b; $("micBtn").disabled = b; }
 
 // Roundtable: show each seat's line one at a time (voice plays if on). Pause stops the reveal.
 async function reveal(lines){
@@ -710,7 +750,7 @@ function finish(){
 $("moreYes").onclick = () => { S.extended = true; $("moreBox").classList.add("hidden"); $("askWrap").classList.remove("hidden"); paintCounter(); addNote(`Great, ${S.data.talkExtra} more replies. Keep it going!`); $("input").focus(); };
 $("moreNo").onclick = () => { S.done = true; $("moreBox").classList.add("hidden"); finish(); };
 $("newBtn").onclick = $("endNew").onclick = () => {
-  stopAudio(); S.queue = []; S.shared = []; paintShared();
+  stopMic(); stopAudio(); S.queue = []; S.shared = []; paintShared();
   $("chat").classList.add("hidden"); $("pick").classList.remove("hidden");
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
