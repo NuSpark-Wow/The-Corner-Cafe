@@ -16,6 +16,8 @@ const TALK_EXTRA = 4;    // ...plus 4 more (either kind of friend) if the visito
 const MAX_ROUNDS = 3;    // Roundtable: rounds per chat
 const HOURLY_LIMIT = 60; // AI calls per visitor per hour
 const hits = new Map();
+// Talk about the past ("remember when...", "years ago", "back in the day") is nostalgia, not a question about this tool's memory.
+const NOSTALGIA = `\nTALK ABOUT THE PAST: When the person says things like "remember when...", "remember flash drives?", "years ago" or "back in the day", they are reminiscing about the past and inviting you to share the memory with them. It is NOT a question about whether you remember earlier chats. Never reply that you have no memory of past conversations. Join in: talk about that time, the thing itself, what it was like and how things have changed, then keep the conversation going.`;
 
 module.exports = async (req, res) => {
   if (!(await require("./_lwgate")(req, res, "the-corner-cafe"))) return;
@@ -115,7 +117,7 @@ async function chat(body) {
     if (!userText) throw fail(400, "Type a message first.");
     // The final reply wraps up. At reply 8 it doesn't wrap up yet, since the visitor may choose 4 more.
     const last = used === max - 1 && !!body.extended;
-    const system = P.personaText(f.id, styles[0], false, String(body.approach || "")) + recapLine + sharedLine +
+    const system = P.personaText(f.id, styles[0], false, String(body.approach || "")) + NOSTALGIA + recapLine + sharedLine +
       (last ? `\nTHIS IS YOUR LAST REPLY IN THIS CHAT: answer their message, then wrap up warmly with a short recap of what you talked about and one next step. Do not end with a question.` : "");
     const messages = [];
     for (const m of history) push(messages, m.role === "user" ? "user" : "assistant", m.text);
@@ -141,7 +143,7 @@ THE SEATS (same friend, different styles):
 ${seats}
 HOW A ROUND WORKS: each seat speaks once, in the order listed. Each line is 2 to 4 sentences. Seats should offer genuinely different angles and alternative opinions, react to each other by style name ("I'd push back on Straight Shooter there..."), and stay friendly. If the person just spoke, answer them directly first. If the person said nothing new, keep the discussion going on its own and go a little deeper.
 ${last ? "THIS IS THE LAST ROUND: the final seat wraps up with a short recap of where the table landed and one next step for the person." : "The final seat ends with a question for the person."}
-${P.RULES}${recapLine}${sharedLine}`;
+${P.RULES}${NOSTALGIA}${recapLine}${sharedLine}`;
   const transcript = history.map(m => m.role === "user" ? `PERSON: ${m.text}` : `${(P.styleById(m.style) || {}).name || "Friend"}: ${m.text}`).join("\n");
   const ask = (transcript ? `CONVERSATION SO FAR:\n${transcript}\n\n` : "") +
     (userText ? `THE PERSON NOW SAYS: ${userText}` : `The person is listening. Keep the discussion going.`);
