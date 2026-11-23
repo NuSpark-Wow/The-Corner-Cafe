@@ -170,6 +170,10 @@ body.embedded .ov{align-items:start;padding-top:28px}
 .chathead h2{margin:0;font-family:Fraunces,Georgia,serif;font-size:clamp(20px,2.6vw,26px)}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:600;background:var(--bg2);border:1.5px solid var(--line)}
+.starters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.starters .lab{width:100%;font-size:13px;opacity:.8}
+.starters button{border-radius:999px;padding:8px 13px;font:600 14px Inter,sans-serif;background:var(--bg2);color:var(--cream);border:1.5px solid var(--green);cursor:pointer}
+.special{display:flex;gap:14px;align-items:center;flex-wrap:wrap;background:#1f2a24;border:3px solid #6b4f2a;border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:inset 0 0 0 2px #2c3a31}
+.special .chalk{font-family:"Comic Sans MS","Segoe Print",cursive;color:#f4f1e6}.special .chalk b{display:block;font-size:13px;letter-spacing:2px;color:#f7d774}.special .chalk span{font-size:18px}.special .chalk small{display:block;opacity:.8;font-size:14px;margin-top:2px}
 .chip button{border:0;background:none;color:var(--soft);font-size:15px;line-height:1;padding:0 0 0 2px}
 .counter{margin-left:auto;color:var(--soft);font-size:14px;font-weight:600}
 .tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
@@ -282,6 +286,7 @@ body.embedded .ov{align-items:start;padding-top:28px}
         <button class="mode on" data-mode="one"><b>☕ One-on-One</b><span>You and one AI friend, in the style you choose.</span></button>
         <button class="mode" data-mode="round"><b>🪑 Roundtable</b><span>The same friend in 2 or 3 styles, talking it through together. Jump in anytime.</span></button>
       </div>
+      <div class="special" id="special"></div>
       <h2 class="step-t">1. Pick a friend</h2>
       <p class="step-s">32 friends, 4 tables. Or let us surprise you.</p>
       <div class="sections" id="tabs"></div>
@@ -355,6 +360,7 @@ body.embedded .ov{align-items:start;padding-top:28px}
       </div>
       <div class="table-top" id="msgs"></div>
       <div id="askWrap">
+        <div class="starters hidden" id="starters"></div>
         <div class="ask">
           <textarea id="input" maxlength="1500"></textarea>
           <button class="mic hidden" id="micBtn" type="button" aria-label="Speak instead of typing" title="Speak instead of typing">🎤</button>
@@ -527,7 +533,7 @@ async function init(){
   } catch(e) { showErr("pickErr", "The café is closed for a moment. Please refresh the page."); return; }
   $("fine").textContent = S.data.finePrint;
   $("fineBottom").textContent = S.data.credit;
-  paintTabs(); paintGrid(); paintStyles(); paintMenu();
+  paintTabs(); paintGrid(); paintStyles(); paintMenu(); paintSpecial();
   if (store.get("ooo_ok", "") !== "1") $("consent").classList.remove("hidden");
 }
 $("agree").onchange = () => $("agreeBtn").disabled = !$("agree").checked;
@@ -598,6 +604,32 @@ function paintStyles(){
 }
 $("startBtn").onclick = () => startChat();
 
+// ---------- conversation starters: 3 tap-to-send openers for each friend, so nobody freezes at an empty box ----------
+const STARTERS = {"listener": ["I just need to talk about my day.", "Something's been on my mind lately.", "Can I tell you about a tough week?"], "sounding": ["I'm trying to figure out what I really want.", "Can I think out loud about a choice?", "Help me sort out my thoughts on something."], "calm": ["Today was a lot. Help me slow down.", "My mind won't stop racing tonight.", "I feel overwhelmed by my to-do list."], "vent": ["I need to vent about work.", "Someone really got on my nerves today.", "Can I just get this off my chest?"], "motivator": ["I keep putting something off. Get me moving!", "I need a push to start exercising.", "Remind me I can do hard things."], "accountability": ["Help me commit to one thing this week.", "I said I'd do something and didn't. Let's talk.", "Check me on a goal I keep skipping."], "wellness": ["Ideas for a better evening routine?", "How can I fit more walking into my day?", "Simple ways to drink more water?"], "relationship": ["How do I bring up something hard with a friend?", "My family and I keep clashing. Any ideas?", "How do I reconnect with an old friend?"], "career": ["Should I ask for a raise? How?", "I'm thinking about changing careers.", "How do I stand out for a promotion?"], "interview": ["Practice 'Tell me about yourself' with me.", "Ask me a tough interview question.", "How do I answer 'What's your weakness?'"], "workplace": ["My boss and I don't see eye to eye.", "A coworker keeps taking credit for my work.", "How do I say no to extra work politely?"], "leadership": ["How do I give feedback without crushing morale?", "My team seems unmotivated. Ideas?", "How do I lead people older than me?"], "money": ["Help me think through a simple budget.", "How do people start saving for retirement?", "Ways to cut monthly spending?"], "goal": ["Turn my big goal into small steps.", "I want to learn a new skill this year.", "Help me plan my next 30 days."], "decision": ["Help me weigh two job offers.", "Should I move or stay put?", "I can't decide. Can we do pros and cons?"], "parenting": ["How do I handle bedtime battles?", "Screen time rules that actually work?", "My teen won't talk to me much."], "intellectual": ["What makes a painting a masterpiece?", "Recommend a great book that changes how you think.", "Let's talk about a big idea in history."], "philosopher": ["What makes a life meaningful?", "Is it ever right to break a promise?", "Do we have free will?"], "idea": ["Brainstorm a side project with me.", "What if cities had no cars?", "Help me name a new idea."], "curious": ["Tell me something fascinating I don't know.", "Why do we dream?", "What's the coolest thing about the ocean?"], "history": ["Tell me a little-known story from history.", "What was daily life like in ancient Rome?", "Which invention changed the world most?"], "traveler": ["What's a hidden-gem place to visit?", "Tell me about a culture's food traditions.", "Best places for a first trip abroad?"], "storyteller": ["Tell me a short story to cheer me up.", "A mystery story, please!", "Tell me a story about an unlikely hero."], "planner": ["Where do I want to be in five years?", "Help me think about what matters most to me.", "I feel stuck. Help me see the big picture."], "sports": ["Who's the greatest athlete of all time?", "Let's talk about the best comeback ever.", "Hot take time: which rule should change?"], "humorist": ["I need a laugh. Got any jokes?", "Tell me a funny story.", "Make my Monday less Monday."], "music": ["Recommend music for a road trip.", "What's the best decade for music?", "Help me find songs like my favorite band."], "bookmovie": ["What should I watch this weekend?", "Recommend a page-turner book.", "What's an underrated classic movie?"], "foodie": ["What's an easy dinner for tonight?", "Tell me about a famous dish and its story.", "Help me plan a fun dinner party menu."], "hobby": ["I want a new hobby. Ideas?", "How do I get started with painting?", "A hobby I can do at home on weekends?"], "nature": ["Tips for my first real hike?", "What's a beautiful national park to visit?", "How do I start birdwatching?"], "tech": ["How do I free up space on my phone?", "Explain what the cloud really is.", "Which smart home gadget is worth it?"]};
+function paintStarters(){
+  const box = $("starters"), list = STARTERS[S.friend] || [];
+  if (S.history.length || !list.length) { box.classList.add("hidden"); return; }
+  box.innerHTML = '<div class="lab">Not sure how to start? Tap one:</div>' + list.map(t => `<button type="button">${esc(t)}</button>`).join("");
+  box.querySelectorAll("button").forEach(b => b.onclick = () => { $("input").value = b.textContent; send(); });
+  box.classList.remove("hidden");
+}
+// ---------- Today's Special: a featured friend and opener on the café chalkboard, new every day ----------
+function paintSpecial(){
+  const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000);
+  const ids = Object.keys(STARTERS), id = ids[day % ids.length];
+  const fr = (S.data && S.data.friends || []).find(f => f.id === id);
+  if (!fr) { $("special").classList.add("hidden"); return; }
+  const line = STARTERS[id][day % 3];
+  $("special").innerHTML = `<div class="chalk"><b>TODAY'S SPECIAL</b><span>${esc(fr.name)}</span><small>"${esc(line)}"</small></div><button class="btn small" id="specialGo" type="button">☕ Order the special</button>`;
+  $("specialGo").onclick = () => {
+    if (S.mode !== "one") { const mb = document.querySelector('.mode[data-mode="one"]'); if (mb) mb.click(); }
+    S.tab = fr.tab; paintTabs(); S.styles = [S.data.styles[1] ? S.data.styles[1].id : S.data.styles[0].id];
+    const aps = S.data.approaches.map(a => a.id); S.approach = aps.includes("balanced") ? "balanced" : aps[0];
+    chooseFriend(fr.id); paintStyles();
+    if (!$("startBtn").disabled) { startChat(); $("input").value = line; }
+  };
+}
+
 function startChat(opts){
   opts = opts || {};
   S.history = opts.history || []; S.used = 0; S.round = 0; S.done = false; S.recap = opts.recap || ""; S.queue = []; S.paused = false; S.extended = false;
@@ -616,7 +648,7 @@ function startChat(opts){
     ? `You're at the Roundtable with ${f.name} in ${S.styles.length} styles. Ask a question and they'll each weigh in. You get ${S.data.maxRounds} rounds.`
     : `You're having coffee with ${f.name} (${ST(S.styles[0]).name}${S.approach ? ", " + AP(S.approach).name : ""}). Say hello or jump right in. You get ${replyMax()} replies in this chat, with an option for ${S.data.talkExtra} more.`);
   if (S.shared.length) addNote("📎 Shared with your friend: " + S.shared.map(x => x.name).join(", "));
-  paintShared();
+  paintShared(); paintStarters();
   showErr("chatErr", "");
   window.scrollTo({ top: 0, behavior: "smooth" });
   setTimeout(() => $("input").focus(), 200);
@@ -743,6 +775,7 @@ if (SR) { $("micBtn").classList.remove("hidden"); $("micBtn").onclick = () => li
 
 async function send(keepGoing){
   if (S.busy || S.done) return;
+  $("starters").classList.add("hidden");
   stopMic();
   const text = $("input").value.trim();
   if (!keepGoing && !text) { $("input").focus(); return; }
