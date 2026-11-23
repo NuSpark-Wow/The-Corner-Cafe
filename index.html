@@ -155,6 +155,12 @@ button{font-family:inherit;cursor:pointer}
 .xclose:hover{border-color:var(--green)}
 .ov .panel .step-t{padding-right:48px}
 body.embedded .ov{align-items:start;padding-top:28px}
+/* phones: the voice picker sits right under the buttons instead of popping up */
+.ov.inline{position:static;inset:auto;background:none;display:block;padding:0;margin:0 0 12px;z-index:auto}
+.ov.inline .panel{max-width:none;border:1.5px solid var(--green)}
+.ov.inline .xclose{display:none}
+.ov.inline .panel .step-t{padding-right:0}
+.ov.inline .vrow b{min-width:0}
 .check{display:flex;gap:10px;align-items:flex-start;margin:14px 0 16px;font-size:15px;line-height:1.4}
 .check input{width:22px;height:22px;accent-color:var(--green);flex:none;margin-top:1px}
 .link{color:var(--green);text-decoration:underline;cursor:pointer;background:none;border:0;padding:0;font:inherit}
@@ -206,6 +212,22 @@ body.embedded .ov{align-items:start;padding-top:28px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--cream);color:var(--bg);padding:11px 18px;border-radius:12px;font-weight:600;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .err{color:#ffb4a2;font-size:14px;margin-top:8px}
 
+/* the menu board: all 32 friends on the opening screen */
+.menuboard{background:linear-gradient(180deg,#2b2a26,#1f1e1b);border:6px solid #6b4329;border-radius:16px;padding:16px 16px 12px;margin-bottom:14px;box-shadow:inset 0 0 40px rgba(0,0,0,.5),0 10px 30px rgba(0,0,0,.35)}
+.menuboard h2{margin:0 0 2px;text-align:center;font-family:Fraunces,Georgia,serif;font-size:24px;color:#f6ead7;letter-spacing:.5px}
+.menuboard .mbsub{text-align:center;color:#cfc8b8;font-size:13px;margin:0 0 12px}
+.mbcols{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.mbcol h3{margin:0 0 6px;font-size:14px;color:var(--gold);border-bottom:1px dashed rgba(246,234,215,.25);padding-bottom:5px}
+.mbcol h3 small{display:block;font-weight:500;color:#a9a294;font-size:11.5px;margin-top:1px}
+.mbcol button{display:block;width:100%;text-align:left;background:none;border:0;color:#efe9dc;font:500 14px/1.3 Inter,sans-serif;padding:5px 2px;cursor:pointer;border-radius:6px}
+.mbcol button:hover,.mbcol button:focus-visible{background:rgba(92,196,137,.15);color:#fff}
+.mbcol button::before{content:"☕ ";font-size:11px;opacity:.6}
+@media(max-width:900px){.mbcols{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:420px){.mbcol button{font-size:13.5px}}
+/* add another voice to the talk */
+.addbox{border:1.5px solid var(--green);border-radius:14px;padding:12px 14px;margin:0 0 12px;background:rgba(0,0,0,.12)}
+.addbox h3{margin:0 0 2px;font-size:17px}
+.addbox p{margin:0 0 10px;color:var(--soft);font-size:13.5px}
 /* voice + copy modals */
 .vrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)}
 .vrow:last-child{border-bottom:0}
@@ -249,6 +271,11 @@ body.embedded .ov{align-items:start;padding-top:28px}
       <div class="hs" style="background-image:url(cafe3.jpg)"></div>
       <div class="hs" style="background-image:url(cafe7.jpg)"></div>
       <div class="hcap" id="heroCap">A seaside terrace</div>
+    </div>
+    <div class="menuboard" id="menuboard">
+      <h2>Today's Menu</h2>
+      <p class="mbsub">All 32 friends. Tap one to pull up a chair.</p>
+      <div class="mbcols" id="menuCols"></div>
     </div>
     <div class="panel" style="margin-bottom:14px">
       <div class="modes">
@@ -305,7 +332,16 @@ body.embedded .ov{align-items:start;padding-top:28px}
         <button class="btn ghost small" id="shareBtn2">📎 Add a website or document</button>
         <button class="btn ghost small" id="copyBtn">🤝 Take This Friend With You</button>
         <button class="btn ghost small" id="dlBtn">⬇️ Download Chat</button>
-        <button class="btn ghost small" id="newBtn">↺ New Chat</button>
+        <button class="btn ghost small" id="addVoiceBtn">➕ Add a Voice</button>
+        <button class="btn ghost small" id="restartBtn">🔄 Start Over</button>
+        <button class="btn ghost small" id="newBtn">🏠 Back to Start</button>
+      </div>
+      <div id="voiceSlot"></div>
+      <div class="addbox hidden" id="addBox">
+        <h3>Add a voice to the talk</h3>
+        <p id="addSub"></p>
+        <div class="row" id="addRow"></div>
+        <div class="row" style="margin-top:10px"><button class="btn ghost small" id="addCancel">Not now</button></div>
       </div>
       <p class="takehint">🤝 <b>Take This Friend With You</b> copies your friend's instructions so you can paste them into ChatGPT, Claude or Gemini and keep the conversation going there.</p>
       <div class="scene" id="scene">
@@ -342,7 +378,8 @@ body.embedded .ov{align-items:start;padding-top:28px}
         <div class="row" style="justify-content:center">
           <button class="btn" id="endDl">⬇️ Download Chat</button>
           <button class="btn ghost" id="endCopy">🤝 Take This Friend With You</button>
-          <button class="btn ghost" id="endNew">↺ Start a New Chat</button>
+          <button class="btn ghost" id="endRestart">🔄 Start Over</button>
+          <button class="btn ghost" id="endNew">🏠 Back to Start</button>
         </div>
       </div>
       <div class="err hidden" id="chatErr"></div>
@@ -490,7 +527,7 @@ async function init(){
   } catch(e) { showErr("pickErr", "The café is closed for a moment. Please refresh the page."); return; }
   $("fine").textContent = S.data.finePrint;
   $("fineBottom").textContent = S.data.credit;
-  paintTabs(); paintGrid(); paintStyles();
+  paintTabs(); paintGrid(); paintStyles(); paintMenu();
   if (store.get("ooo_ok", "") !== "1") $("consent").classList.remove("hidden");
 }
 $("agree").onchange = () => $("agreeBtn").disabled = !$("agree").checked;
@@ -512,6 +549,12 @@ function paintGrid(){
   $("grid").innerHTML = S.data.friends.filter(f => f.tab === S.tab).map(f =>
     `<button class="friend ${S.friend === f.id ? "on" : ""}" data-f="${f.id}"><div class="ico">${icon(f.icon)}</div><b>${esc(f.name)}</b><small>${esc(f.blurb)}</small></button>`).join("");
   $("grid").querySelectorAll(".friend").forEach(b => b.onclick = () => chooseFriend(b.dataset.f));
+}
+function paintMenu(){
+  $("menuCols").innerHTML = S.data.tabs.map(t => { const sec = S.data.sections.find(x => x.id === t.section) || {};
+    return `<div class="mbcol"><h3>${t.emoji} ${esc(t.label)}<small>${esc(sec.label || "")}</small></h3>` +
+      S.data.friends.filter(f => f.tab === t.id).map(f => `<button data-f="${f.id}" title="${esc(f.blurb)}">${esc(f.name)}</button>`).join("") + `</div>`; }).join("");
+  $("menuCols").querySelectorAll("button").forEach(b => b.onclick = () => { const f = F(b.dataset.f); S.tab = f.tab; paintTabs(); chooseFriend(f.id); });
 }
 function chooseFriend(id){
   S.friend = id; paintGrid();
@@ -759,14 +802,64 @@ function finish(){
 }
 $("moreYes").onclick = () => { S.extended = true; $("moreBox").classList.add("hidden"); $("askWrap").classList.remove("hidden"); paintCounter(); addNote(`Great, ${S.data.talkExtra} more replies. Keep it going!`); $("input").focus(); };
 $("moreNo").onclick = () => { S.done = true; $("moreBox").classList.add("hidden"); finish(); };
+// Back to Start: return to the opening screen to pick a new friend
 $("newBtn").onclick = $("endNew").onclick = () => {
-  stopMic(); stopAudio(); S.queue = []; S.shared = []; paintShared();
+  stopMic(); stopAudio(); S.queue = []; S.shared = []; paintShared(); $("addBox").classList.add("hidden");
+  if (S.mode === "one" && S.styles.length > 1) S.styles = S.styles.slice(0, 1);
+  document.querySelectorAll(".mode").forEach(x => x.classList.toggle("on", x.dataset.mode === S.mode));
+  paintStyles();
   $("chat").classList.add("hidden"); $("pick").classList.remove("hidden");
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
+// Start Over: same friend, same style(s), a fresh conversation
+$("restartBtn").onclick = $("endRestart").onclick = () => {
+  if (S.busy) return;
+  stopMic(); stopAudio(); S.queue = []; $("addBox").classList.add("hidden");
+  startChat();
+  toast("Fresh start with " + F(S.friend).name + ".");
+};
+// Add a Voice: bring another style of the same friend into the talk (it becomes a Roundtable)
+$("addVoiceBtn").onclick = () => {
+  if (S.busy) return;
+  const box = $("addBox");
+  if (!box.classList.contains("hidden")) { box.classList.add("hidden"); return; }
+  const left = S.data.styles.filter(s => !S.styles.includes(s.id));
+  if (!left.length || S.done) { toast(S.done ? "This chat is complete. Tap Start Over to begin again." : "All 3 styles are already at the table."); return; }
+  $("addSub").textContent = `Pull up another ${F(S.friend).name} in a different style. They'll join the talk, see what's been said, and react to each other.` +
+    (S.mode === "one" ? ` This turns your chat into a Roundtable with ${S.data.maxRounds} rounds.` : "");
+  $("addRow").innerHTML = left.map(s => `<button class="btn ghost small" data-s="${s.id}"><span class="dot" style="background:${s.color}"></span> ${esc(s.name)}</button>`).join("");
+  $("addRow").querySelectorAll("[data-s]").forEach(b => b.onclick = () => addSeat(b.dataset.s));
+  box.classList.remove("hidden");
+  setTimeout(() => box.scrollIntoView({ behavior:"smooth", block:"nearest" }), 50);
+};
+$("addCancel").onclick = () => $("addBox").classList.add("hidden");
+function addSeat(id){
+  $("addBox").classList.add("hidden");
+  const wasOne = S.mode === "one";
+  S.styles = S.styles.concat(id);
+  if (wasOne) { S.mode = "round"; S.round = 0; S.approach = null; $("roundCtl").classList.remove("hidden"); $("duo").classList.add("hidden");
+    $("input").placeholder = "Ask the table a question..."; }
+  // give the new seat a voice of its own (opposite of the first seat, so you can tell them apart)
+  const first = S.voices[S.styles[0]];
+  if (!S.voices[id]) S.voices[id] = { gender: first && first.gender === "male" ? "female" : "male", slot: Math.floor(Math.random() * 5) };
+  paintChips(); paintTable(null); paintCounter();
+  addNote(`${ST(id).name} pulled up a chair. ` + (wasOne ? `You're at the Roundtable now with ${S.data.maxRounds} rounds. ` : "") +
+    "Ask the table something, or tap Keep going and they'll pick up the conversation.");
+}
 
 // ---------- voice ----------
-let audio = null;
+// One audio player for the whole chat. Phones (iPhone and many Androids) only allow sound
+// after a tap, and they block sound that starts after waiting on the server. So the first tap
+// anywhere "unlocks" this one player with a split second of silence, and every voice reuses it.
+const SILENT = "data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YZABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const player = new Audio(); player.preload = "auto"; player.setAttribute("playsinline", "");
+let audio = null, unlocked = false, voiceFailNoted = false;
+function unlockAudio(){
+  if (unlocked) return;
+  try { player.src = SILENT; player.volume = 0; const p = player.play(); unlocked = true;
+    if (p && p.catch) p.catch(() => { unlocked = false; }); } catch(e) {}
+}
+["touchend","click","keydown"].forEach(ev => document.addEventListener(ev, unlockAudio, true));
 S.speed = store.get("ooo_speed", "normal");
 $("speedBox").querySelectorAll("button").forEach(b => { b.classList.toggle("on", b.dataset.sp === S.speed); b.onclick = () => { S.speed = b.dataset.sp; store.set("ooo_speed", S.speed); $("speedBox").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); }; });
 S.volume = Number(store.get("ooo_vol", "85")) / 100; S.muted = false;
@@ -774,23 +867,31 @@ $("volume").value = Math.round(S.volume * 100);
 const applyVol = () => { if (audio) audio.volume = S.muted ? 0 : S.volume; $("muteBtn").textContent = S.muted || S.volume === 0 ? "🔇" : "🔊"; };
 $("volume").oninput = () => { S.volume = $("volume").value / 100; if (S.volume > 0) S.muted = false; store.set("ooo_vol", String($("volume").value)); applyVol(); };
 $("muteBtn").onclick = () => { S.muted = !S.muted; applyVol(); };
-function stopAudio(){ if (audio) { try { audio.pause(); } catch(e){} audio = null; } }
+let playToken = 0;
+function stopAudio(){ playToken++; if (audio) { try { audio.pause(); } catch(e){} audio = null; } }
 async function speak(text, style){
   const v = S.voices[style] || { gender:"male", slot:0 };
   try {
     const r = await post("/api/speak", { text, style, gender:v.gender, slot:v.slot, speed:S.speed }, 45000);
-    await playB64(r.audio);
-  } catch(e) { /* text is already on screen */ }
+    const ok = await playB64(r.audio);
+    if (!ok && !voiceFailNoted) { voiceFailNoted = true; toast("Your phone blocked the sound. Tap the screen once, then it will play."); }
+  } catch(e) {
+    if (!voiceFailNoted) { voiceFailNoted = true; toast("The voice didn't come through. The text is still there."); }
+  }
 }
+// resolves true when the clip played to the end, false if the phone blocked it
 function playB64(b64){
   return new Promise(res => {
     stopAudio();
-    audio = new Audio("data:audio/mpeg;base64," + b64);
-    const a = audio;
-    a.volume = S.muted ? 0 : S.volume;
-    a.onended = a.onerror = () => res();
-    a.play().catch(() => res());
-    const iv = setInterval(() => { if (audio !== a) { clearInterval(iv); res(); } }, 300);
+    const my = ++playToken;
+    audio = player;
+    player.onended = () => res(true);
+    player.onerror = () => res(false);
+    player.src = "data:audio/mpeg;base64," + b64;
+    player.volume = S.muted ? 0 : S.volume;
+    const p = player.play();
+    if (p && p.catch) p.catch(() => res(false));
+    const iv = setInterval(() => { if (playToken !== my) { clearInterval(iv); res(true); } }, 300);
   });
 }
 const SAMPLE = { straight:"Hi. I'll keep it real with you. What's on your mind?", easy:"Hey there! Grab a coffee and tell me what's going on.", warm:"Hi, friend. I'm really glad you're here. What can I help with?" };
@@ -803,24 +904,37 @@ $("voiceBtn").onclick = () => {
   $("voiceRows").querySelectorAll(".vrow").forEach(row => {
     const id = row.dataset.s;
     row.querySelectorAll("[data-g]").forEach(b => b.onclick = () => {
+      picked = true;
       S.voices[id] = { gender:b.dataset.g, slot:Math.floor(Math.random() * 5) };
       row.querySelectorAll("[data-g]").forEach(x => x.classList.toggle("on", x === b));
       sample(id);
     });
-    row.querySelector("[data-try]").onclick = () => { S.voices[id].slot++; sample(id); };
+    row.querySelector("[data-try]").onclick = () => { picked = true; S.voices[id].slot++; sample(id); };
   });
   showErr("voiceErr", "");
-  $("voiceOv").classList.remove("hidden");
+  picked = false;
+  const ov = $("voiceOv"), phone = window.matchMedia("(max-width:760px)").matches;
+  ov.classList.toggle("inline", phone);
+  if (phone) $("voiceSlot").appendChild(ov); else document.body.appendChild(ov);
+  ov.classList.remove("hidden");
+  if (phone) setTimeout(() => ov.scrollIntoView({ behavior:"smooth", block:"nearest" }), 50);
 };
+let picked = false;
 async function sample(id){
   const v = S.voices[id];
-  try { const r = await post("/api/speak", { text:SAMPLE[id] || SAMPLE.easy, style:id, gender:v.gender, slot:v.slot }, 30000); showErr("voiceErr", ""); playB64(r.audio); }
+  try { const r = await post("/api/speak", { text:SAMPLE[id] || SAMPLE.easy, style:id, gender:v.gender, slot:v.slot }, 30000); showErr("voiceErr", "");
+    const ok = await playB64(r.audio);
+    if (!ok) showErr("voiceErr", "Your phone blocked the sample. Check the volume or silent switch, then tap Try another."); }
   catch(e) { showErr("voiceErr", e.message); }
 }
-$("voiceOn").onclick = () => { S.voiceOn = true; stopAudio(); $("voiceOv").classList.add("hidden"); paintVoiceBtn(); toast("Voice on. Your friend will read replies out loud."); };
+function voiceOnNow(){ S.voiceOn = true; voiceFailNoted = false; stopAudio(); $("voiceOv").classList.add("hidden"); paintVoiceBtn(); toast("Voice on. Your friend will read replies out loud."); }
+$("voiceOn").onclick = voiceOnNow;
 $("voiceOff").onclick = () => { S.voiceOn = false; stopAudio(); $("voiceOv").classList.add("hidden"); paintVoiceBtn(); };
 // close any pop-up (except the one-time agreement): the ✕, a tap on the dark area, or Esc
-function closeOv(ov){ if (ov.id === "voiceOv") { stopAudio(); paintVoiceBtn(); } ov.classList.add("hidden"); }
+function closeOv(ov){
+  if (ov.id === "voiceOv") { if (picked) return voiceOnNow(); stopAudio(); paintVoiceBtn(); }
+  ov.classList.add("hidden");
+}
 ["voiceOv","shareOv","copyOv"].forEach(id => {
   const ov = $(id);
   ov.querySelector(".xclose").onclick = () => closeOv(ov);
